@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Annual Contractor Spending by Contractor</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #151820;
+    --border: #22263a;
+    --text: #e8e9ef;
+    --muted: #5a5f7a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 48px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2rem;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  header p {
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .chart-wrap {
+    width: 100%;
+    max-width: 980px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 40px 48px 32px;
+  }
+
+  .chart-area {
+    position: relative;
+    height: 380px;
+    display: flex;
+    align-items: flex-end;
+  }
+
+  .y-axis {
+    width: 64px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding-bottom: 0;
+    flex-shrink: 0;
+  }
+
+  .y-tick {
+    font-size: 0.62rem;
+    color: var(--muted);
+    text-align: right;
+    padding-right: 10px;
+    line-height: 1;
+  }
+
+  .plot-area {
+    flex: 1;
+    height: 100%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .gridlines {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .gridline {
+    width: 100%;
+    border-top: 1px dashed #1e2235;
+  }
+
+  .bars-row {
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    gap: 5px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-end;
+    height: 100%;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .stacked-bar {
+    display: flex;
+    flex-direction: column-reverse;
+    width: 100%;
+  }
+
+  .segment {
+    width: 100%;
+    transition: opacity 0.15s;
+    min-height: 1px;
+  }
+
+  .bar-col:hover .segment { opacity: 0.8; }
+
+  .tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1d2e;
+    border: 1px solid #33384f;
+    border-radius: 8px;
+    padding: 10px 14px;
+    z-index: 100;
+    pointer-events: none;
+    min-width: 180px;
+  }
+
+  .tooltip-year {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1rem;
+    color: var(--text);
+    margin-bottom: 6px;
+    border-bottom: 1px solid #22263a;
+    padding-bottom: 6px;
+  }
+
+  .tooltip-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 4px;
+    font-size: 0.68rem;
+    color: #b0b4cc;
+  }
+
+  .tooltip-swatch {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .tooltip-name { flex: 1; }
+  .tooltip-amt { color: var(--text); font-size: 0.72rem; }
+
+  .bar-col:hover .tooltip { display: block; }
+
+  .x-labels {
+    display: flex;
+    gap: 5px;
+    margin-top: 8px;
+    padding-left: 64px;
+  }
+
+  .x-label {
+    flex: 1;
+    text-align: center;
+    font-size: 0.6rem;
+    color: var(--muted);
+  }
+
+  /* Legend */
+  .legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .note {
+    margin-top: 14px;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Annual Contractor Spending</h1>
+  <p>Top 5 contractors per year · stacked by contractor · 2000–2023</p>
+</header>
+
+<div class="chart-wrap">
+  <div class="chart-area">
+    <div class="y-axis" id="yaxis"></div>
+    <div class="plot-area">
+      <div class="gridlines" id="gridlines"></div>
+      <div class="bars-row" id="bars"></div>
+    </div>
+  </div>
+  <div class="x-labels" id="xlabels"></div>
+</div>
+<p class="note">* 2013 had no listed contractors · Hover bars for details</p>
+
+<script>
+const rawData = {"years": [{"year": 2000, "contractors": [{"name": "Sodexo/Sodexho", "pay": 1376954.0}, {"name": "Aardvark", "pay": 303932.0}, {"name": "Alvada Construction", "pay": 233936.0}, {"name": "Vaughn Industries", "pay": 224107.0}, {"name": "Ohio Building Restoration", "pay": 205964.0}]}, {"year": 2001, "contractors": [{"name": "Kuhlman Builders", "pay": 484420.0}, {"name": "Vaughn Industries", "pay": 378784.0}, {"name": "Alvada Construction", "pay": 263995.0}, {"name": "Rhonda Hile & Associates", "pay": 216774.0}, {"name": "Sodexo/Sodexho", "pay": 148820.0}]}, {"year": 2002, "contractors": [{"name": "Sodexo/Sodexho", "pay": 1494439.0}, {"name": "Helms\u2019 & Sons Excavating", "pay": 283124.0}, {"name": "American Digital", "pay": 160689.0}, {"name": "Mignone Communications", "pay": 140876.0}, {"name": "Kennedy Printing", "pay": 138913.0}]}, {"year": 2003, "contractors": [{"name": "Sodexo/Sodexho", "pay": 1695139.0}, {"name": "Vaughn Industries", "pay": 482000.0}, {"name": "Charles Hipp", "pay": 114655.0}, {"name": "American Digital Technologies Ii", "pay": 99940.0}, {"name": "Michael Webber", "pay": 68842.0}]}, {"year": 2004, "contractors": [{"name": "Sodexo/Sodexho", "pay": 1841061.0}, {"name": "Exponent Event Technologies Llc", "pay": 152289.0}, {"name": "Vaughn Industries", "pay": 113213.0}, {"name": "Charles Hipp", "pay": 112502.0}, {"name": "Michael Webber", "pay": 78701.0}]}, {"year": 2005, "contractors": [{"name": "Sodexo/Sodexho", "pay": 2033808.0}, {"name": "Vaughn Industries", "pay": 664457.0}, {"name": "Kuenzli And Sons Paving", "pay": 205355.0}, {"name": "Exponent Event Technologies Llc", "pay": 158828.0}, {"name": "Carpet Genie", "pay": 76744.0}]}, {"year": 2006, "contractors": [{"name": "Sodexo/Sodexho", "pay": 2250497.0}, {"name": "Vaughn Industries", "pay": 1914948.0}, {"name": "Kuenzli And Sons Paving", "pay": 251316.0}, {"name": "Schoolhouse Electronics", "pay": 162759.0}, {"name": "Carpet Genie", "pay": 80591.0}]}, {"year": 2007, "contractors": [{"name": "Sodexo/Sodexho", "pay": 2336121.0}, {"name": "Vaughn Industries", "pay": 775603.0}, {"name": "Kuenzli And Sons Paving", "pay": 225372.0}, {"name": "Tri-Weh Interior", "pay": 149242.0}, {"name": "All Star Plumbing Ac", "pay": 118650.0}]}, {"year": 2008, "contractors": [{"name": "Vaughn Industries", "pay": 654983.0}, {"name": "Haar Haar Painting", "pay": 147380.0}, {"name": "Exponent Event Technologies Llc", "pay": 145431.0}, {"name": "Cartwright Electric Llc", "pay": 140206.0}, {"name": "Charles Hipp", "pay": 124481.0}]}, {"year": 2009, "contractors": [{"name": "Sodexo/Sodexho", "pay": 2697581.0}, {"name": "Vaughn Industries", "pay": 1076370.0}, {"name": "ACI Construction", "pay": 582908.0}, {"name": "CSI Construction", "pay": 286882.0}, {"name": "Yates & Young Heating", "pay": 285160.0}]}, {"year": 2010, "contractors": [{"name": "Sodexo/Sodexho", "pay": 2689873.0}, {"name": "ACI Construction", "pay": 2623308.0}, {"name": "CSI Construction", "pay": 909148.0}, {"name": "Rcm Architects", "pay": 571360.0}, {"name": "Yates & Young Heating", "pay": 461266.0}]}, {"year": 2011, "contractors": [{"name": "Charles Construction", "pay": 5011236.0}, {"name": "Sodexo/Sodexho", "pay": 2811034.0}, {"name": "Greensleeves", "pay": 1883750.0}, {"name": "CSI Construction", "pay": 759525.0}, {"name": "ACI Construction", "pay": 562138.0}]}, {"year": 2012, "contractors": [{"name": "Sodexo/Sodexho", "pay": 2884932.0}, {"name": "CSI Construction", "pay": 387444.0}, {"name": "Charles Construction", "pay": 385018.0}, {"name": "Jenzabar Inc", "pay": 317022.0}, {"name": "Yates & Young Heating", "pay": 202513.0}]}, {"year": 2013, "contractors": []}, {"year": 2014, "contractors": [{"name": "Sodexo/Sodexho", "pay": 3556918.0}, {"name": "CSI Construction", "pay": 819450.0}, {"name": "Vaughn Industries", "pay": 758593.0}, {"name": "Special Maintenance Roofing Llc", "pay": 325173.0}, {"name": "Cartwright Electric Llc", "pay": 271424.0}]}, {"year": 2015, "contractors": [{"name": "Sodexo/Sodexho", "pay": 3740087.0}, {"name": "CSI Construction", "pay": 843078.0}, {"name": "Maumee Bay", "pay": 585745.0}, {"name": "Ma Architects", "pay": 562100.0}, {"name": "Connor Sports Flooring Llc", "pay": 403500.0}]}, {"year": 2016, "contractors": [{"name": "Ruscilli Construction", "pay": 4840878.0}, {"name": "The Learning House", "pay": 1689361.0}, {"name": "CSI Construction", "pay": 553180.0}, {"name": "Connor Sports Flooring Llc", "pay": 403500.0}, {"name": "Ma Architects", "pay": 401038.0}]}, {"year": 2017, "contractors": [{"name": "Ruscilli Construction", "pay": 12438210.0}, {"name": "The Learning House", "pay": 1287243.0}, {"name": "ACI Construction", "pay": 1065200.0}, {"name": "Vaughn Industries", "pay": 992431.0}, {"name": "Collaborative Solutions/Workday", "pay": 544215.0}]}, {"year": 2018, "contractors": [{"name": "Collaborative Solutions/Workday", "pay": 1258600.0}, {"name": "Wiley Edu", "pay": 843942.0}, {"name": "IBM Corporation", "pay": 591614.0}, {"name": "Jenzabar Inc", "pay": 421946.0}, {"name": "Blackboard Inc", "pay": 326753.0}]}, {"year": 2019, "contractors": [{"name": "Collaborative Solutions/Workday", "pay": 3263785.0}, {"name": "Wiley Edu", "pay": 472930.0}, {"name": "The Ohio State University", "pay": 245365.0}, {"name": "Jenzabar Inc", "pay": 227829.0}]}, {"year": 2020, "contractors": [{"name": "Collaborative Solutions/Workday", "pay": 3263785.0}, {"name": "Wiley Edu", "pay": 472930.0}, {"name": "Jenzabar Inc", "pay": 227829.0}, {"name": "Clean Team", "pay": 217534.0}]}, {"year": 2021, "contractors": [{"name": "Collaborative Solutions/Workday", "pay": 2248723.0}, {"name": "Metzger Brecheisen Company Llc", "pay": 224458.0}, {"name": "Quality Painting And Roofing Llc", "pay": 158430.0}, {"name": "Maumee Bay", "pay": 153000.0}, {"name": "Crowe Llp", "pay": 118620.0}]}, {"year": 2022, "contractors": [{"name": "Whitta Construction Llc", "pay": 436415.0}, {"name": "Collaborative Solutions/Workday", "pay": 243038.0}, {"name": "Frankart Electric", "pay": 140568.0}, {"name": "Watermark Insights Llc", "pay": 108459.0}, {"name": "Laura Hoehne", "pay": 101717.0}]}, {"year": 2023, "contractors": [{"name": "Maumee Bay", "pay": 479285.0}, {"name": "Timely Telehealth Llc", "pay": 245340.0}, {"name": "Collaborative Solutions/Workday", "pay": 222564.0}, {"name": "Watermark Insights Llc", "pay": 138215.0}, {"name": "K&E Hvac Solutions Llc", "pay": 137550.0}]}]};
+
+// Build color map — assign consistent colors to each unique contractor
+const allContractors = [];
+rawData.years.forEach(y => y.contractors.forEach(c => {
+  if (!allContractors.includes(c.name)) allContractors.push(c.name);
+}));
+
+// Palette — rich, distinct, dark-theme friendly
+const palette = [
+  '#e8c547','#e8674a','#5b8dee','#4ecb8d','#c45be8',
+  '#e84a7a','#47c8e8','#a8e847','#e8984a','#7a47e8',
+  '#47e8c2','#e84747','#6ea8f0','#f0a86e','#a06ef0',
+  '#6ef0c2','#f06e6e','#c2f06e','#6eb8f0','#f06ec2',
+  '#b8e86e','#6ef0b8','#f0b86e','#b86ef0','#f0e86e',
+  '#6eb8e8','#e86eb8','#b8f06e','#6e6ef0','#f06eb8',
+  '#8ef06e','#6ef08e','#f0f06e','#6e8ef0','#f08e6e',
+  '#e86e8e','#8e6ef0','#6ef0f0','#f06ef0','#8ef0f0',
+  '#f0f08e','#f08ef0','#8ef08e','#f08e8e','#8e8ef0',
+  '#d4e847','#47d4e8','#e847d4','#d4e8a8','#a8d4e8'
+];
+
+const colorMap = {};
+allContractors.forEach((c, i) => colorMap[c] = palette[i % palette.length]);
+
+const maxTotal = Math.max(...rawData.years.map(y => y.contractors.reduce((s, c) => s + c.pay, 0)));
+const chartHeight = 380;
+const gridSteps = 5;
+
+// Y-axis
+const yAxis = document.getElementById('yaxis');
+for (let i = 0; i <= gridSteps; i++) {
+  const val = maxTotal * (1 - i / gridSteps);
+  const tick = document.createElement('div');
+  tick.className = 'y-tick';
+  tick.textContent = i === gridSteps ? '$0' : '$' + (val / 1e6).toFixed(1) + 'M';
+  yAxis.appendChild(tick);
+}
+
+// Gridlines
+const gridlines = document.getElementById('gridlines');
+for (let i = 0; i <= gridSteps; i++) {
+  const gl = document.createElement('div');
+  gl.className = 'gridline';
+  gridlines.appendChild(gl);
+}
+
+// Bars
+const barsEl = document.getElementById('bars');
+const xlabels = document.getElementById('xlabels');
+
+rawData.years.forEach(yearData => {
+  const total = yearData.contractors.reduce((s, c) => s + c.pay, 0);
+  const totalHeight = (total / maxTotal) * chartHeight;
+
+  const col = document.createElement('div');
+  col.className = 'bar-col';
+
+  // Tooltip
+  let tooltipHTML = `<div class="tooltip-year">${yearData.year}</div>`;
+  if (yearData.contractors.length === 0) {
+    tooltipHTML += `<div class="tooltip-row" style="color:var(--muted)">No data</div>`;
+  } else {
+    yearData.contractors.forEach(c => {
+      tooltipHTML += `
+        <div class="tooltip-row">
+          <div class="tooltip-swatch" style="background:${colorMap[c.name]}"></div>
+          <div class="tooltip-name">${c.name}</div>
+          <div class="tooltip-amt">$${(c.pay/1e6).toFixed(2)}M</div>
+        </div>`;
+    });
+    tooltipHTML += `<div class="tooltip-row" style="border-top:1px solid #22263a;margin-top:5px;padding-top:5px;">
+      <div class="tooltip-name" style="color:var(--text)">Total</div>
+      <div class="tooltip-amt" style="color:var(--accent,#e8c547)">$${(total/1e6).toFixed(2)}M</div>
+    </div>`;
+  }
+
+  // Stacked bar
+  const stack = document.createElement('div');
+  stack.className = 'stacked-bar';
+  stack.style.height = totalHeight + 'px';
+
+  yearData.contractors.forEach(c => {
+    const segH = (c.pay / maxTotal) * chartHeight;
+    const seg = document.createElement('div');
+    seg.className = 'segment';
+    seg.style.height = segH + 'px';
+    seg.style.background = colorMap[c.name];
+    stack.appendChild(seg);
+  });
+
+  col.innerHTML = `<div class="tooltip">${tooltipHTML}</div>`;
+  col.appendChild(stack);
+  barsEl.appendChild(col);
+
+  // X label
+  const lbl = document.createElement('div');
+  lbl.className = 'x-label';
+  lbl.textContent = yearData.year;
+  xlabels.appendChild(lbl);
+});
+
+
+
+// Animate bars in
+setTimeout(() => {
+  document.querySelectorAll('.stacked-bar').forEach((bar, i) => {
+    const h = bar.style.height;
+    bar.style.height = '0';
+    bar.style.overflow = 'hidden';
+    bar.style.transition = `height 0.5s ease ${i * 25}ms`;
+    setTimeout(() => { bar.style.height = h; }, 20);
+  });
+}, 100);
+</script>
+</body>
+</html>

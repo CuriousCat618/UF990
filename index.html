@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>University of Findlay — Contractor Spending</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #0f1118;
+    --border: #1c1f2c;
+    --text: #e2dfd6;
+    --muted: #5a5d6e;
+    --accent: #EE7624;
+    --accent-dim: rgba(238,118,36,0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    overflow-x: hidden;
+  }
+
+  /* ── Grain overlay ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 256px;
+  }
+
+  /* ── Navigation ── */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 500;
+    background: rgba(10,12,16,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+    height: 56px;
+  }
+
+  .nav-brand {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 0;
+    list-style: none;
+  }
+
+  .nav-links li a {
+    display: block;
+    padding: 0 20px;
+    height: 56px;
+    line-height: 56px;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+  }
+
+  .nav-links li a:hover,
+  .nav-links li a.active {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+
+  /* ── Hero ── */
+  .hero {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 80px 40px 72px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: end;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hero-left .eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 18px;
+  }
+
+  .hero-left h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(36px, 5vw, 64px);
+    font-weight: 900;
+    line-height: 1.0;
+    letter-spacing: -1px;
+    color: var(--text);
+    margin-bottom: 24px;
+  }
+
+  .hero-left h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .hero-left p {
+    font-size: 12px;
+    line-height: 1.9;
+    color: var(--muted);
+    font-weight: 300;
+    max-width: 420px;
+  }
+
+  .hero-right {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-bottom: 4px;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat-label {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .stat-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    color: var(--text);
+  }
+
+  .stat-value span {
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    margin-left: 6px;
+  }
+
+  /* ── Section layout ── */
+  .section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 72px 40px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section:last-of-type {
+    border-bottom: none;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    gap: 40px;
+  }
+
+  .section-number {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(24px, 3vw, 36px);
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--text);
+    letter-spacing: -0.3px;
+  }
+
+  .section-desc {
+    font-size: 11px;
+    line-height: 1.8;
+    color: var(--muted);
+    max-width: 360px;
+    font-weight: 300;
+    flex-shrink: 0;
+    padding-top: 2px;
+  }
+
+  /* ── iFrame containers ── */
+  .chart-frame-wrap {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--surface);
+    position: relative;
+  }
+
+  .chart-frame-wrap::before {
+    content: '';
+    display: block;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+
+  iframe {
+    display: block;
+    width: 100%;
+    border: none;
+  }
+
+  /* ── Chart toolbar ── */
+  .chart-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .chart-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+  }
+
+  .chart-btn:hover {
+    color: var(--text);
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .chart-btn svg {
+    flex-shrink: 0;
+  }
+
+  /* ── Fullscreen modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    background: rgba(6, 7, 10, 0.94);
+    backdrop-filter: blur(6px);
+    padding: 20px;
+    flex-direction: column;
+  }
+
+  .modal-overlay.open {
+    display: flex;
+  }
+
+  .modal-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+  }
+
+  .modal-title {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .modal-close {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .modal-close:hover {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .modal-frame-wrap {
+    flex: 1;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .modal-frame-wrap::before {
+    content: '';
+    display: block;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+
+  .modal-frame-wrap iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+  }
+
+  /* ── Footer ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 36px 40px;
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  footer p {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 720px) {
+    .hero {
+      grid-template-columns: 1fr;
+      gap: 40px;
+      padding: 48px 24px 56px;
+    }
+
+    nav { padding: 0 20px; }
+    .nav-brand { display: none; }
+    .nav-links li a { padding: 0 12px; font-size: 9px; }
+
+    .section { padding: 48px 24px; }
+    .section-header { flex-direction: column; gap: 16px; }
+    .section-desc { max-width: 100%; }
+
+    footer { flex-direction: column; gap: 12px; text-align: center; padding: 28px 24px; }
+  }
+
+  /* ── Scroll animation ── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav>
+  <span class="nav-brand">UF Spending</span>
+  <ul class="nav-links">
+    <li><a href="#categories" id="nav-1">Categories</a></li>
+    <li><a href="#over-time" id="nav-2">Over Time</a></li>
+    <li><a href="#contractors" id="nav-3">By Contractor</a></li>
+  </ul>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-left">
+    <p class="eyebrow">University of Findlay · 2000–2023</p>
+    <h1>Contractor<br>Spending<br><em>Examined</em></h1>
+    <p>Three views into two decades of institutional spending — from sweeping category trends to individual contractor relationships. Data sourced from public university records.</p>
+  </div>
+  <div class="hero-right">
+    <div class="stat-row">
+      <span class="stat-label">Total Span</span>
+      <span class="stat-value">23 <span>years</span></span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Largest Single Year</span>
+      <span class="stat-value">$16.3M <span>2017</span></span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Largest Category</span>
+      <span class="stat-value">Construction <span>$44.6M</span></span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Top Contractor</span>
+      <span class="stat-value">Sodexo <span>$31.6M</span></span>
+    </div>
+  </div>
+</div>
+
+<!-- Chart 1: Packed Circles -->
+<div class="section reveal" id="categories">
+  <div class="section-header">
+    <div>
+      <p class="section-number">01 — Category Overview</p>
+      <h2 class="section-title">Spending by<br>Category</h2>
+    </div>
+    <p class="section-desc">Packed circles show total spending per category across all years. Click any category to drill into individual contractors, then click a contractor to see their year-by-year payments.</p>
+  </div>
+  <div class="chart-frame-wrap">
+    <div class="chart-toolbar">
+      <button class="chart-btn" onclick="openModal('packed_circles_revised.html', 'Spending by Category')">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 4.5V1H4.5M7.5 1H11V4.5M11 7.5V11H7.5M4.5 11H1V7.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        Zoom
+      </button>
+      <a class="chart-btn" href="packed_circles_revised.html" target="_blank">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M5 2H2C1.45 2 1 2.45 1 3V10C1 10.55 1.45 11 2 11H9C9.55 11 10 10.55 10 10V7M7.5 1H11M11 1V4.5M11 1L5.5 6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Open
+      </a>
+    </div>
+    <iframe src="packed_circles_revised.html" height="740" title="Contractor spending packed circles by category"></iframe>
+  </div>
+</div>
+
+<!-- Chart 2: Spending Shift -->
+<div class="section reveal" id="over-time">
+  <div class="section-header">
+    <div>
+      <p class="section-number">02 — Temporal Trends</p>
+      <h2 class="section-title">How Priorities<br>Shifted</h2>
+    </div>
+    <p class="section-desc">A stacked area chart tracking spending by category from 2002 to 2023. Hover over any band to isolate a category and see exact figures for each year.</p>
+  </div>
+  <div class="chart-frame-wrap">
+    <div class="chart-toolbar">
+      <button class="chart-btn" onclick="openModal('spending_shift.html', 'Spending Shift Over Time')">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 4.5V1H4.5M7.5 1H11V4.5M11 7.5V11H7.5M4.5 11H1V7.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        Zoom
+      </button>
+      <a class="chart-btn" href="spending_shift.html" target="_blank">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M5 2H2C1.45 2 1 2.45 1 3V10C1 10.55 1.45 11 2 11H9C9.55 11 10 10.55 10 10V7M7.5 1H11M11 1V4.5M11 1L5.5 6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Open
+      </a>
+    </div>
+    <iframe src="spending_shift.html" height="600" title="Institutional spending shift over time"></iframe>
+  </div>
+</div>
+
+<!-- Chart 3: By Contractor -->
+<div class="section reveal" id="contractors">
+  <div class="section-header">
+    <div>
+      <p class="section-number">03 — Individual Contractors</p>
+      <h2 class="section-title">Top 5 Contractors<br>Per Year</h2>
+    </div>
+    <p class="section-desc">Stacked bars for each year showing the top five paid contractors. Each color represents a unique contractor — hover any bar for the full breakdown and totals.</p>
+  </div>
+  <div class="chart-frame-wrap">
+    <div class="chart-toolbar">
+      <button class="chart-btn" onclick="openModal('spending_by_contractor.html', 'Annual Spending by Contractor')">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 4.5V1H4.5M7.5 1H11V4.5M11 7.5V11H7.5M4.5 11H1V7.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        Zoom
+      </button>
+      <a class="chart-btn" href="spending_by_contractor.html" target="_blank">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M5 2H2C1.45 2 1 2.45 1 3V10C1 10.55 1.45 11 2 11H9C9.55 11 10 10.55 10 10V7M7.5 1H11M11 1V4.5M11 1L5.5 6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Open
+      </a>
+    </div>
+    <iframe src="spending_by_contractor.html" height="560" title="Annual spending by contractor"></iframe>
+  </div>
+</div>
+
+<!-- Fullscreen Modal -->
+<div class="modal-overlay" id="chartModal">
+  <div class="modal-bar">
+    <span class="modal-title" id="modalTitle"></span>
+    <div class="modal-actions">
+      <a class="modal-close" id="modalOpenLink" href="#" target="_blank">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M5 2H2C1.45 2 1 2.45 1 3V10C1 10.55 1.45 11 2 11H9C9.55 11 10 10.55 10 10V7M7.5 1H11M11 1V4.5M11 1L5.5 6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Open in new tab
+      </a>
+      <button class="modal-close" onclick="closeModal()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1L11 11M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Close
+      </button>
+    </div>
+  </div>
+  <div class="modal-frame-wrap">
+    <iframe id="modalFrame" src="" title="Chart fullscreen view"></iframe>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer>
+  <p>University of Findlay · Contractor Spending · 2000–2023</p>
+  <p>Data sourced from public university records</p>
+</footer>
+
+<script>
+  // Scroll reveal
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) e.target.classList.add('visible');
+    });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // Active nav highlight on scroll
+  const sections = ['categories', 'over-time', 'contractors'];
+  const navLinks = { 'categories': 'nav-1', 'over-time': 'nav-2', 'contractors': 'nav-3' };
+
+  const secObserver = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+        const linkId = navLinks[e.target.id];
+        if (linkId) document.getElementById(linkId).classList.add('active');
+      }
+    });
+  }, { threshold: 0.4 });
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) secObserver.observe(el);
+  });
+
+  // Modal
+  function openModal(src, title) {
+    document.getElementById('modalFrame').src = src;
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalOpenLink').href = src;
+    document.getElementById('chartModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    document.getElementById('chartModal').classList.remove('open');
+    document.getElementById('modalFrame').src = '';
+    document.body.style.overflow = '';
+  }
+
+  // Close on overlay click (but not on content)
+  document.getElementById('chartModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  // Close on Escape key
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModal();
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Contractor Spending — Packed Circles</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  :root {
+    --bg: #f5f0e8;
+    --ink: #1a1510;
+    --muted: #7a6f60;
+    --surface: #ede8dc;
+    --border: #c8bfaa;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    color: var(--ink);
+    letter-spacing: -0.5px;
+  }
+
+  header p {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 6px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  #breadcrumb {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 10px;
+    min-height: 20px;
+    letter-spacing: 0.04em;
+  }
+
+  #breadcrumb span {
+    color: var(--ink);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  #chart {
+    width: 100%;
+    max-width: 820px;
+  }
+
+  svg {
+    width: 100%;
+    height: auto;
+    cursor: pointer;
+  }
+
+  .node circle {
+    stroke-width: 1.5px;
+    transition: opacity 0.2s;
+  }
+
+  .node circle:hover { opacity: 0.85; }
+
+  .node text {
+    font-family: 'IBM Plex Mono', monospace;
+    pointer-events: none;
+    dominant-baseline: middle;
+    text-anchor: middle;
+  }
+
+  .back-btn {
+    display: none;
+    margin-top: 16px;
+    background: var(--ink);
+    color: var(--bg);
+    border: none;
+    padding: 9px 22px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+
+  .back-btn:hover { opacity: 0.8; }
+
+  #tooltip {
+    position: fixed;
+    background: var(--ink);
+    color: var(--bg);
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 100;
+    max-width: 220px;
+    line-height: 1.6;
+  }
+
+  #tooltip strong {
+    font-size: 0.82rem;
+    display: block;
+    margin-bottom: 2px;
+    font-family: 'Playfair Display', serif;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Contractor Spending</h1>
+  <p>By category · click a circle to zoom in</p>
+</header>
+
+<div id="breadcrumb"></div>
+<div id="chart"></div>
+<button class="back-btn" id="backBtn">← Back to all categories</button>
+<div id="tooltip"></div>
+
+<script>
+const data = {
+  name: "root",
+  children: [
+    {
+      name: "Construction",
+      total: 44573623,
+      children: [
+        { name: "Ruscilli Construction", value: 17279088 },
+        { name: "Vaughn Industries", value: 7656705 },
+        { name: "Charles Construction", value: 5396254 },
+        { name: "ACI Construction", value: 4833554 },
+        { name: "CSI Construction", value: 4558707 },
+        { name: "Greensleeves", value: 1883750 },
+        { name: "Alvada Construction", value: 497931 },
+        { name: "Kuhlman Builders", value: 484420 },
+        { name: "Whitta Construction", value: 436415 },
+        { name: "Connor Sports Flooring", value: 403500 },
+        { name: "Metzger Brecheisen", value: 224458 },
+        { name: "Ohio Building Restoration", value: 205964 },
+        { name: "Quality Painting & Roofing", value: 158430 },
+        { name: "Maumee Bay", value: 153000 },
+        { name: "Tri-WEH Interior", value: 149242 },
+        { name: "K&E HVAC Solutions", value: 137550 },
+        { name: "Charles Hipp", value: 114655 }
+      ]
+    },
+    {
+      name: "Food Service",
+      total: 31557264,
+      children: [
+        { name: "Sodexo/Sodexho", value: 31557264 }
+      ]
+    },
+    {
+      name: "Software / Technology",
+      total: 14221488,
+      children: [
+        { name: "Collaborative Solutions / Workday", value: 11044710 },
+        { name: "Jenzabar Inc", value: 1194626 },
+        { name: "IBM Corporation", value: 591614 },
+        { name: "Blackboard Inc", value: 326753 },
+        { name: "Exponent Event Tech", value: 311117 },
+        { name: "Watermark Insights", value: 246674 },
+        { name: "Ohio State University", value: 245365 },
+        { name: "American Digital", value: 160689 },
+        { name: "American Digital Tech II", value: 99940 }
+      ]
+    },
+    {
+      name: "Academic / Online Courses",
+      total: 4766406,
+      children: [
+        { name: "The Learning House", value: 2976604 },
+        { name: "Wiley Edu", value: 1789802 }
+      ]
+    },
+    {
+      name: "Facilities & Grounds",
+      total: 2997995,
+      children: [
+        { name: "Maumee Bay", value: 1065030 },
+        { name: "Kuenzli And Sons Paving", value: 682043 },
+        { name: "Connor Sports Flooring", value: 403500 },
+        { name: "Special Maintenance Roofing", value: 325173 },
+        { name: "Clean Team", value: 217534 },
+        { name: "Carpet Genie", value: 157335 },
+        { name: "Haar Haar Painting", value: 147380 }
+      ]
+    },
+    {
+      name: "Mechanical / Electrical",
+      total: 2161330,
+      children: [
+        { name: "Yates & Young Heating", value: 948939 },
+        { name: "Cartwright Electric", value: 411630 },
+        { name: "Vaughn Industries", value: 378784 },
+        { name: "Schoolhouse Electronics", value: 162759 },
+        { name: "Frankart Electric", value: 140568 },
+        { name: "All Star Plumbing AC", value: 118650 }
+      ]
+    },
+    {
+      name: "Architecture",
+      total: 1534498,
+      children: [
+        { name: "MA Architects", value: 963138 },
+        { name: "RCM Architects", value: 571360 }
+      ]
+    },
+    {
+      name: "Advertising / Printing",
+      total: 496563,
+      children: [
+        { name: "Rhonda Hile & Associates", value: 216774 },
+        { name: "Mignone Communications", value: 140876 },
+        { name: "Kennedy Printing", value: 138913 }
+      ]
+    },
+    {
+      name: "Accounting / Auditing",
+      total: 355603,
+      children: [
+        { name: "Charles Hipp", value: 236983 },
+        { name: "Crowe LLP", value: 118620 }
+      ]
+    },
+    {
+      name: "Consulting",
+      total: 303932,
+      children: [
+        { name: "Aardvark", value: 303932 }
+      ]
+    },
+    {
+      name: "Excavating",
+      total: 283124,
+      children: [
+        { name: "Helms' & Sons Excavating", value: 283124 }
+      ]
+    },
+    {
+      name: "Training Services",
+      total: 249260,
+      children: [
+        { name: "Michael Webber", value: 147543 },
+        { name: "Laura Hoehne", value: 101717 }
+      ]
+    },
+    {
+      name: "Healthcare",
+      total: 245340,
+      children: [
+        { name: "Timely Telehealth LLC", value: 245340 }
+      ]
+    },
+    {
+      name: "Contract Services",
+      total: 145431,
+      children: [
+        { name: "Exponent Event Tech", value: 145431 }
+      ]
+    }
+  ]
+};
+
+// Category colors — earthy, editorial palette
+// Year-by-year earnings per contractor (normalized names)
+const yearlyData = {
+  "Sodexo/Sodexho": [{year:2000,pay:1376954},{year:2001,pay:148820},{year:2002,pay:1494439},{year:2003,pay:1695139},{year:2004,pay:1841061},{year:2005,pay:2033808},{year:2006,pay:2250497},{year:2007,pay:2336121},{year:2009,pay:2697581},{year:2010,pay:2689873},{year:2011,pay:2811034},{year:2012,pay:2884932},{year:2014,pay:3556918},{year:2015,pay:3740087}],
+  "Ruscilli Construction": [{year:2016,pay:4840878},{year:2017,pay:12438210}],
+  "Collaborative Solutions / Workday": [{year:2017,pay:544215},{year:2018,pay:1258600},{year:2019,pay:3263785},{year:2020,pay:3263785},{year:2021,pay:2248723},{year:2022,pay:243038},{year:2023,pay:222564}],
+  "Vaughn Industries": [{year:2000,pay:224107},{year:2001,pay:378784},{year:2003,pay:482000},{year:2004,pay:113213},{year:2005,pay:664457},{year:2006,pay:1914948},{year:2007,pay:775603},{year:2008,pay:654983},{year:2009,pay:1076370},{year:2014,pay:758593},{year:2017,pay:992431}],
+  "Charles Construction": [{year:2011,pay:5011236},{year:2012,pay:385018}],
+  "ACI Construction": [{year:2009,pay:582908},{year:2010,pay:2623308},{year:2011,pay:562138},{year:2017,pay:1065200}],
+  "CSI Construction": [{year:2009,pay:286882},{year:2010,pay:909148},{year:2011,pay:759525},{year:2012,pay:387444},{year:2014,pay:819450},{year:2015,pay:843078},{year:2016,pay:553180}],
+  "The Learning House": [{year:2016,pay:1689361},{year:2017,pay:1287243}],
+  "Greensleeves": [{year:2011,pay:1883750}],
+  "Wiley Edu": [{year:2018,pay:843942},{year:2019,pay:472930},{year:2020,pay:472930}],
+  "Maumee Bay": [{year:2015,pay:585745},{year:2021,pay:153000},{year:2023,pay:479285}],
+  "Jenzabar Inc": [{year:2012,pay:317022},{year:2018,pay:421946},{year:2019,pay:227829},{year:2020,pay:227829}],
+  "Ma Architects": [{year:2015,pay:562100},{year:2016,pay:401038}],
+  "Yates & Young Heating": [{year:2009,pay:285160},{year:2010,pay:461266},{year:2012,pay:202513}],
+  "Connor Sports Flooring": [{year:2015,pay:403500},{year:2016,pay:403500}],
+  "Kuenzli And Sons Paving": [{year:2005,pay:205355},{year:2006,pay:251316},{year:2007,pay:225372}],
+  "IBM Corporation": [{year:2018,pay:591614}],
+  "Rcm Architects": [{year:2010,pay:571360}],
+  "Alvada Construction": [{year:2000,pay:233936},{year:2001,pay:263995}],
+  "Kuhlman Builders": [{year:2001,pay:484420}],
+  "Exponent Event Tech": [{year:2004,pay:152289},{year:2005,pay:158828},{year:2008,pay:145431}],
+  "Whitta Construction": [{year:2022,pay:436415}],
+  "Cartwright Electric": [{year:2008,pay:140206},{year:2014,pay:271424}],
+  "Charles Hipp": [{year:2003,pay:114655},{year:2004,pay:112502},{year:2008,pay:124481},{year:2013,pay:0}],
+  "Blackboard Inc": [{year:2018,pay:326753}],
+  "Special Maintenance Roofing": [{year:2014,pay:325173}],
+  "Aardvark": [{year:2000,pay:303932}],
+  "Helms' & Sons Excavating": [{year:2002,pay:283124}],
+  "Watermark Insights": [{year:2022,pay:108459},{year:2023,pay:138215}],
+  "Ohio State University": [{year:2019,pay:245365}],
+  "Timely Telehealth LLC": [{year:2023,pay:245340}],
+  "Metzger Brecheisen": [{year:2021,pay:224458}],
+  "Clean Team": [{year:2020,pay:217534}],
+  "Rhonda Hile & Associates": [{year:2001,pay:216774}],
+  "Ohio Building Restoration": [{year:2000,pay:205964}],
+  "Schoolhouse Electronics": [{year:2006,pay:162759}],
+  "American Digital": [{year:2002,pay:160689}],
+  "Quality Painting & Roofing": [{year:2021,pay:158430}],
+  "Carpet Genie": [{year:2005,pay:76744},{year:2006,pay:80591}],
+  "Tri-WEH Interior": [{year:2007,pay:149242}],
+  "Michael Webber": [{year:2003,pay:68842},{year:2004,pay:78701}],
+  "Haar Haar Painting": [{year:2008,pay:147380}],
+  "Mignone Communications": [{year:2002,pay:140876}],
+  "Frankart Electric": [{year:2022,pay:140568}],
+  "Kennedy Printing": [{year:2002,pay:138913}],
+  "K&E HVAC Solutions": [{year:2023,pay:137550}],
+  "All Star Plumbing AC": [{year:2007,pay:118650}],
+  "Crowe LLP": [{year:2021,pay:118620}],
+  "Laura Hoehne": [{year:2022,pay:101717}],
+  "American Digital Tech II": [{year:2003,pay:99940}],
+};
+
+const catColors = {
+  "Construction": "#c0392b",
+  "Food Service": "#e67e22",
+  "Software / Technology": "#2980b9",
+  "Academic / Online Courses": "#8e44ad",
+  "Facilities & Grounds": "#27ae60",
+  "Mechanical / Electrical": "#f39c12",
+  "Architecture": "#16a085",
+  "Advertising / Printing": "#d35400",
+  "Accounting / Auditing": "#2c3e50",
+  "Consulting": "#7f8c8d",
+  "Excavating": "#795548",
+  "Training Services": "#e91e63",
+  "Healthcare": "#009688",
+  "Contract Services": "#607d8b"
+};
+
+const W = 820, H = 820;
+let currentView = 'root';
+
+const svg = d3.select("#chart")
+  .append("svg")
+  .attr("viewBox", `0 0 ${W} ${H}`)
+  .attr("preserveAspectRatio", "xMidYMid meet");
+
+const g = svg.append("g");
+
+const tooltip = document.getElementById("tooltip");
+const backBtn = document.getElementById("backBtn");
+const breadcrumb = document.getElementById("breadcrumb");
+
+function fmt(n) {
+  if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+  return '$' + n.toLocaleString();
+}
+
+function drawRoot() {
+  currentView = 'root';
+  backBtn.style.display = 'none';
+  breadcrumb.innerHTML = '<span>All Categories</span>';
+
+  g.selectAll("*").remove();
+
+  // Build hierarchy using total for outer circles
+  const rootData = {
+    name: "root",
+    children: data.children.map(d => ({ name: d.name, value: d.total }))
+  };
+
+  const root = d3.hierarchy(rootData)
+    .sum(d => d.value)
+    .sort((a, b) => b.value - a.value);
+
+  const pack = d3.pack().size([W - 40, H - 40]).padding(12);
+  pack(root);
+
+  const nodes = g.selectAll(".node")
+    .data(root.leaves())
+    .enter()
+    .append("g")
+    .attr("class", "node")
+    .attr("transform", d => `translate(${d.x + 20},${d.y + 20})`)
+    .style("cursor", "pointer")
+    .on("click", (event, d) => drawCategory(d.data.name))
+    .on("mousemove", (event, d) => {
+      tooltip.style.opacity = 1;
+      tooltip.style.left = (event.clientX + 14) + 'px';
+      tooltip.style.top = (event.clientY - 10) + 'px';
+      const cat = data.children.find(c => c.name === d.data.name);
+      tooltip.innerHTML = `<strong>${d.data.name}</strong>${fmt(d.data.value)}<br><span style="color:#aaa;font-size:0.65rem">${cat.children.length} contractor${cat.children.length > 1 ? 's' : ''} · click to zoom</span>`;
+    })
+    .on("mouseleave", () => { tooltip.style.opacity = 0; });
+
+  nodes.append("circle")
+    .attr("r", 0)
+    .attr("fill", d => catColors[d.data.name] || '#888')
+    .attr("fill-opacity", 0.18)
+    .attr("stroke", d => catColors[d.data.name] || '#888')
+    .attr("stroke-opacity", 0.7)
+    .transition().duration(600).delay((d, i) => i * 40)
+    .attr("r", d => d.r);
+
+  // Inside labels for large circles
+  nodes.each(function(d) {
+    if (d.r >= 55) {
+      const color = catColors[d.data.name] || '#333';
+      const fs = Math.min(14, d.r / 4.5);
+      const lineH = Math.max(12, fs + 2);
+      const words = d.data.name.split(' ');
+      const el = d3.select(this).append("text")
+        .attr("font-size", fs)
+        .attr("fill", color)
+        .attr("fill-opacity", 0);
+      if (words.length <= 2) {
+        el.append("tspan").attr("x", 0).attr("dy", "-0.3em").text(d.data.name);
+      } else {
+        const mid = Math.ceil(words.length / 2);
+        el.append("tspan").attr("x", 0).attr("dy", "-0.6em").text(words.slice(0, mid).join(' '));
+        el.append("tspan").attr("x", 0).attr("dy", lineH).text(words.slice(mid).join(' '));
+      }
+      el.append("tspan").attr("x", 0).attr("dy", lineH)
+        .attr("font-size", Math.max(8, fs - 2))
+        .text(fmt(d.data.value));
+      el.transition().delay(300).duration(300).attr("fill-opacity", 1);
+    }
+  });
+
+  // Leader lines for small circles
+  const labelGroup = g.append("g").attr("class", "leader-labels");
+  const packCX = (W - 40) / 2 + 20;
+  const packCY = (H - 40) / 2 + 20;
+
+  const smallLeaders = root.leaves().filter(d => d.r < 55).map(d => {
+    const nx = d.x + 20;
+    const ny = d.y + 20;
+    let dx = nx - packCX;
+    let dy = ny - packCY;
+    const mag = Math.sqrt(dx*dx + dy*dy) || 1;
+    dx /= mag; dy /= mag;
+    const x1 = nx + dx * (d.r + 3);
+    const y1 = ny + dy * (d.r + 3);
+    const x2 = x1 + dx * 48;
+    const y2 = y1 + dy * 48;
+    const tickDir = nx >= packCX ? 1 : -1;
+    return { d, nx, ny, x1, y1, x2, y2raw: y2, y2, tickDir };
+  });
+
+  // Separate into left and right groups, sort by raw y, then spread vertically to avoid overlap
+  const labelH = 26; // height per label block
+  ['left', 'right'].forEach(side => {
+    const group = smallLeaders
+      .filter(l => (side === 'right') === (l.tickDir > 0))
+      .sort((a, b) => a.y2raw - b.y2raw);
+
+    // Iteratively push labels apart
+    for (let iter = 0; iter < 30; iter++) {
+      for (let i = 1; i < group.length; i++) {
+        const prev = group[i - 1];
+        const curr = group[i];
+        const gap = curr.y2 - prev.y2;
+        if (gap < labelH) {
+          const push = (labelH - gap) / 2;
+          prev.y2 -= push;
+          curr.y2 += push;
+        }
+      }
+    }
+  });
+
+  smallLeaders.forEach((l, i) => {
+    const { d, x1, y1, x2, y2, tickDir } = l;
+    const color = catColors[d.data.name] || '#888';
+    const x3 = x2 + tickDir * 28;
+    const anchor = tickDir > 0 ? "start" : "end";
+    const textX = x3 + tickDir * 5;
+
+    const lg = labelGroup.append("g").attr("opacity", 0);
+
+    // Line from circle edge to elbow
+    lg.append("line")
+      .attr("x1", x1).attr("y1", y1).attr("x2", x2).attr("y2", y2)
+      .attr("stroke", color).attr("stroke-width", 1.2).attr("stroke-opacity", 0.7);
+
+    // Horizontal tick
+    lg.append("line")
+      .attr("x1", x2).attr("y1", y2).attr("x2", x3).attr("y2", y2)
+      .attr("stroke", color).attr("stroke-width", 1.2).attr("stroke-opacity", 0.7);
+
+    // Dot at circle edge
+    lg.append("circle")
+      .attr("cx", x1).attr("cy", y1).attr("r", 2).attr("fill", color);
+
+    lg.append("text")
+      .attr("x", textX).attr("y", y2 - 3)
+      .attr("text-anchor", anchor)
+      .attr("font-family", "'IBM Plex Mono', monospace")
+      .attr("font-size", 9.5).attr("fill", "#1a1510")
+      .text(d.data.name);
+
+    lg.append("text")
+      .attr("x", textX).attr("y", y2 + 10)
+      .attr("text-anchor", anchor)
+      .attr("font-family", "'IBM Plex Mono', monospace")
+      .attr("font-size", 8.5).attr("fill", color)
+      .text(fmt(d.data.value));
+
+    lg.transition().delay(300 + i * 50).duration(350).attr("opacity", 1);
+  });
+}
+
+function drawCategory(catName) {
+  currentView = catName;
+  backBtn.style.display = 'inline-block';
+  breadcrumb.innerHTML = `<span onclick="drawRoot()">All Categories</span> → <strong>${catName}</strong>`;
+
+  const cat = data.children.find(c => c.name === catName);
+  const color = catColors[catName] || '#888';
+
+  g.selectAll("*").remove();
+
+  const rootData = {
+    name: catName,
+    children: cat.children
+  };
+
+  const root = d3.hierarchy(rootData)
+    .sum(d => d.value)
+    .sort((a, b) => b.value - a.value);
+
+  const pack = d3.pack().size([W - 60, H - 60]).padding(16);
+  pack(root);
+
+  // Draw outer container circle
+  const outerR = Math.min(W, H) / 2 - 20;
+
+  g.append("circle")
+    .attr("cx", W / 2).attr("cy", H / 2)
+    .attr("r", 0)
+    .attr("fill", color).attr("fill-opacity", 0.06)
+    .attr("stroke", color).attr("stroke-opacity", 0.3).attr("stroke-width", 2)
+    .transition().duration(400)
+    .attr("r", outerR);
+
+  g.append("text")
+    .attr("x", W / 2).attr("y", 32)
+    .attr("text-anchor", "middle")
+    .attr("font-family", "'Playfair Display', serif")
+    .attr("font-size", 18)
+    .attr("fill", color)
+    .attr("opacity", 0)
+    .text(catName + ' — ' + fmt(cat.total))
+    .transition().duration(400).delay(200)
+    .attr("opacity", 1);
+
+  const nodes = g.selectAll(".node")
+    .data(root.leaves())
+    .enter()
+    .append("g")
+    .attr("class", "node")
+    .attr("transform", d => `translate(${d.x + 30},${d.y + 30})`)
+    .style("cursor", "pointer")
+    .on("click", (event, d) => drawContractor(d.data.name, catName))
+    .on("mousemove", (event, d) => {
+      tooltip.style.opacity = 1;
+      tooltip.style.left = (event.clientX + 14) + 'px';
+      tooltip.style.top = (event.clientY - 10) + 'px';
+      const pct = ((d.data.value / cat.total) * 100).toFixed(1);
+      tooltip.innerHTML = `<strong>${d.data.name}</strong>${fmt(d.data.value)}<br><span style="color:#aaa;font-size:0.65rem">${pct}% of category · click to see by year</span>`;
+    })
+    .on("mouseleave", () => { tooltip.style.opacity = 0; });
+
+  nodes.append("circle")
+    .attr("r", 0)
+    .attr("fill", color)
+    .attr("fill-opacity", d => 0.15 + (d.value / root.value) * 0.5)
+    .attr("stroke", color)
+    .attr("stroke-opacity", 0.6)
+    .transition().duration(500).delay((d, i) => i * 50)
+    .attr("r", d => d.r);
+
+  // Inside-circle labels for large circles
+  nodes.each(function(d) {
+    const el = d3.select(this);
+    if (d.r >= 48) {
+      const fs = Math.min(13, d.r / 4.5);
+      const lineH = fs + 3;
+      const words = d.data.name.split(' ');
+      const txt = el.append("text")
+        .attr("fill", "#1a1510")
+        .attr("fill-opacity", 0)
+        .attr("font-size", fs);
+      if (words.length <= 2) {
+        txt.append("tspan").attr("x", 0).attr("dy", "-0.4em").text(d.data.name);
+      } else {
+        const mid = Math.ceil(words.length / 2);
+        txt.append("tspan").attr("x", 0).attr("dy", "-0.7em").text(words.slice(0, mid).join(' '));
+        txt.append("tspan").attr("x", 0).attr("dy", lineH).text(words.slice(mid).join(' '));
+      }
+      txt.append("tspan").attr("x", 0).attr("dy", lineH + 1)
+        .attr("font-size", Math.max(7, fs - 1))
+        .attr("fill", color)
+        .text(fmt(d.data.value));
+      txt.transition().delay(300).duration(300).attr("fill-opacity", 1);
+    }
+  });
+
+  // Leader lines + external labels for small circles
+  // nodes are translated by (d.x+30, d.y+30), so absolute SVG coords of circle center = (d.x+30, d.y+30)
+  const labelGroup = g.append("g").attr("class", "leader-labels");
+  const packCX = (W - 60) / 2 + 30;  // center of pack area in SVG coords
+  const packCY = (H - 60) / 2 + 30;
+
+  const smallNodes = root.leaves().filter(d => d.r < 55);
+
+  smallNodes.forEach((d, i) => {
+    // Absolute SVG center of this circle
+    const nx = d.x + 30;
+    const ny = d.y + 30;
+
+    // Direction: from pack center outward through this node
+    let dx = nx - packCX;
+    let dy = ny - packCY;
+    const mag = Math.sqrt(dx*dx + dy*dy) || 1;
+    dx /= mag; dy /= mag;
+
+    // Line starts at circle edge
+    const x1 = nx + dx * (d.r + 3);
+    const y1 = ny + dy * (d.r + 3);
+
+    // Line ends 50px further out
+    const lineLen = 50;
+    const x2 = x1 + dx * lineLen;
+    const y2 = y1 + dy * lineLen;
+
+    // Horizontal tick, direction based on which half of SVG we're in
+    const tickDir = nx >= packCX ? 1 : -1;
+    const tickLen = 28;
+    const x3 = x2 + tickDir * tickLen;
+    const y3 = y2;
+
+    const anchor = tickDir > 0 ? "start" : "end";
+    const textX = x3 + tickDir * 5;
+
+    const lg = labelGroup.append("g").attr("opacity", 0);
+
+    // Diagonal line
+    lg.append("line")
+      .attr("x1", x1).attr("y1", y1)
+      .attr("x2", x2).attr("y2", y2)
+      .attr("stroke", color)
+      .attr("stroke-width", 1.2)
+      .attr("stroke-opacity", 0.7);
+
+    // Horizontal tick
+    lg.append("line")
+      .attr("x1", x2).attr("y1", y2)
+      .attr("x2", x3).attr("y2", y3)
+      .attr("stroke", color)
+      .attr("stroke-width", 1.2)
+      .attr("stroke-opacity", 0.7);
+
+    // Dot at circle edge
+    lg.append("circle")
+      .attr("cx", x1).attr("cy", y1)
+      .attr("r", 2)
+      .attr("fill", color);
+
+    // Name label
+    lg.append("text")
+      .attr("x", textX).attr("y", y3 - 3)
+      .attr("text-anchor", anchor)
+      .attr("font-family", "'IBM Plex Mono', monospace")
+      .attr("font-size", 9.5)
+      .attr("fill", "#1a1510")
+      .text(d.data.name);
+
+    // Value label
+    lg.append("text")
+      .attr("x", textX).attr("y", y3 + 10)
+      .attr("text-anchor", anchor)
+      .attr("font-family", "'IBM Plex Mono', monospace")
+      .attr("font-size", 8.5)
+      .attr("fill", color)
+      .text(fmt(d.data.value));
+
+    lg.transition().delay(300 + i * 50).duration(350).attr("opacity", 1);
+  });
+}
+
+function drawContractor(contractorName, catName) {
+  currentView = 'contractor';
+  backBtn.style.display = 'inline-block';
+  backBtn.onclick = () => drawCategory(catName);
+  breadcrumb.innerHTML = `<span onclick="drawRoot()">All Categories</span> → <span onclick="drawCategory('${catName}')">${catName}</span> → <strong>${contractorName}</strong>`;
+
+  const color = catColors[catName] || '#888';
+  const yearly = yearlyData[contractorName] || [];
+  const total = yearly.reduce((s, d) => s + d.pay, 0);
+
+  g.selectAll("*").remove();
+  tooltip.style.opacity = 0;
+
+  if (yearly.length === 0) {
+    g.append("text").attr("x", W/2).attr("y", H/2)
+      .attr("text-anchor", "middle").attr("font-size", 14)
+      .attr("fill", "#7a6f60").text("No year-by-year data available.");
+    return;
+  }
+
+  const padL = 70, padR = 40, padT = 80, padB = 60;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+
+  // Title
+  g.append("text")
+    .attr("x", W/2).attr("y", 36)
+    .attr("text-anchor", "middle")
+    .attr("font-family", "'Playfair Display', serif")
+    .attr("font-size", 20).attr("fill", color)
+    .attr("opacity", 0)
+    .text(contractorName)
+    .transition().duration(400).attr("opacity", 1);
+
+  g.append("text")
+    .attr("x", W/2).attr("y", 56)
+    .attr("text-anchor", "middle")
+    .attr("font-family", "'IBM Plex Mono', monospace")
+    .attr("font-size", 10).attr("fill", "#7a6f60")
+    .attr("opacity", 0)
+    .text("Total: " + fmt(total) + "  ·  " + yearly.length + " year" + (yearly.length > 1 ? "s" : ""))
+    .transition().duration(400).delay(100).attr("opacity", 1);
+
+  const allYears = d3.range(
+    d3.min(yearly, d => d.year),
+    d3.max(yearly, d => d.year) + 1
+  );
+  const payByYear = Object.fromEntries(yearly.map(d => [d.year, d.pay]));
+
+  const xScale = d3.scaleBand()
+    .domain(allYears)
+    .range([padL, padL + chartW])
+    .padding(0.25);
+
+  const yMax = d3.max(yearly, d => d.pay);
+  const yScale = d3.scaleLinear()
+    .domain([0, yMax * 1.1])
+    .range([padT + chartH, padT]);
+
+  // Gridlines
+  const yTicks = yScale.ticks(5);
+  yTicks.forEach(t => {
+    g.append("line")
+      .attr("x1", padL).attr("x2", padL + chartW)
+      .attr("y1", yScale(t)).attr("y2", yScale(t))
+      .attr("stroke", "#c8bfaa").attr("stroke-dasharray", "3,3").attr("stroke-width", 1);
+
+    g.append("text")
+      .attr("x", padL - 8).attr("y", yScale(t) + 4)
+      .attr("text-anchor", "end")
+      .attr("font-family", "'IBM Plex Mono', monospace")
+      .attr("font-size", 9).attr("fill", "#7a6f60")
+      .text(t >= 1e6 ? '$' + (t/1e6).toFixed(1) + 'M' : '$' + (t/1e3).toFixed(0) + 'k');
+  });
+
+  // X axis baseline
+  g.append("line")
+    .attr("x1", padL).attr("x2", padL + chartW)
+    .attr("y1", padT + chartH).attr("y2", padT + chartH)
+    .attr("stroke", "#c8bfaa").attr("stroke-width", 1);
+
+  // Bars
+  allYears.forEach((year, i) => {
+    const pay = payByYear[year] || 0;
+    const bx = xScale(year);
+    const bw = xScale.bandwidth();
+    const by = yScale(pay);
+    const bh = padT + chartH - by;
+
+    if (pay > 0) {
+      // Bar background (ghost)
+      g.append("rect")
+        .attr("x", bx).attr("y", padT)
+        .attr("width", bw).attr("height", chartH)
+        .attr("fill", color).attr("fill-opacity", 0.04);
+
+      // Actual bar
+      g.append("rect")
+        .attr("x", bx).attr("y", padT + chartH)
+        .attr("width", bw).attr("height", 0)
+        .attr("fill", color).attr("fill-opacity", 0.75)
+        .attr("rx", 3)
+        .on("mousemove", (event) => {
+          tooltip.style.opacity = 1;
+          tooltip.style.left = (event.clientX + 14) + 'px';
+          tooltip.style.top = (event.clientY - 10) + 'px';
+          tooltip.innerHTML = `<strong>${year}</strong>${fmt(pay)}`;
+        })
+        .on("mouseleave", () => { tooltip.style.opacity = 0; })
+        .transition().duration(500).delay(i * 30)
+        .attr("y", by).attr("height", bh);
+
+      // Value label on top
+      if (bw > 20) {
+        g.append("text")
+          .attr("x", bx + bw/2).attr("y", by - 5)
+          .attr("text-anchor", "middle")
+          .attr("font-family", "'IBM Plex Mono', monospace")
+          .attr("font-size", Math.min(9, bw / 3))
+          .attr("fill", color)
+          .attr("opacity", 0)
+          .text(fmt(pay))
+          .transition().delay(i * 30 + 400).duration(300)
+          .attr("opacity", 1);
+      }
+    }
+
+    // X label
+    g.append("text")
+      .attr("x", bx + bw/2).attr("y", padT + chartH + 16)
+      .attr("text-anchor", "middle")
+      .attr("font-family", "'IBM Plex Mono', monospace")
+      .attr("font-size", allYears.length > 12 ? 8 : 10)
+      .attr("fill", pay > 0 ? "#1a1510" : "#c8bfaa")
+      .text(year);
+  });
+}
+
+backBtn.addEventListener("click", drawRoot);
+window.drawRoot = drawRoot;
+window.drawCategory = drawCategory;
+
+drawRoot();
+</script>
+</body>
+</html>
