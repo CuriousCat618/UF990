@@ -270,9 +270,7 @@
     background: var(--accent-dim);
   }
 
-  .chart-btn svg {
-    flex-shrink: 0;
-  }
+  .chart-btn svg { flex-shrink: 0; }
 
   /* ── Fullscreen modal ── */
   .modal-overlay {
@@ -280,15 +278,13 @@
     position: fixed;
     inset: 0;
     z-index: 900;
-    background: rgba(6, 7, 10, 0.94);
+    background: rgba(6,7,10,0.94);
     backdrop-filter: blur(6px);
     padding: 20px;
     flex-direction: column;
   }
 
-  .modal-overlay.open {
-    display: flex;
-  }
+  .modal-overlay.open { display: flex; }
 
   .modal-bar {
     display: flex;
@@ -305,10 +301,7 @@
     color: var(--muted);
   }
 
-  .modal-actions {
-    display: flex;
-    gap: 8px;
-  }
+  .modal-actions { display: flex; gap: 8px; }
 
   .modal-close {
     display: flex;
@@ -324,13 +317,11 @@
     border: 1px solid var(--border);
     border-radius: 3px;
     cursor: pointer;
+    text-decoration: none;
     transition: border-color 0.15s, background 0.15s;
   }
 
-  .modal-close:hover {
-    border-color: var(--accent);
-    background: var(--accent-dim);
-  }
+  .modal-close:hover { border-color: var(--accent); background: var(--accent-dim); }
 
   .modal-frame-wrap {
     flex: 1;
@@ -373,20 +364,13 @@
 
   /* ── Responsive ── */
   @media (max-width: 720px) {
-    .hero {
-      grid-template-columns: 1fr;
-      gap: 40px;
-      padding: 48px 24px 56px;
-    }
-
+    .hero { grid-template-columns: 1fr; gap: 40px; padding: 48px 24px 56px; }
     nav { padding: 0 20px; }
     .nav-brand { display: none; }
     .nav-links li a { padding: 0 12px; font-size: 9px; }
-
     .section { padding: 48px 24px; }
     .section-header { flex-direction: column; gap: 16px; }
     .section-desc { max-width: 100%; }
-
     footer { flex-direction: column; gap: 12px; text-align: center; padding: 28px 24px; }
   }
 
@@ -442,7 +426,7 @@
   </div>
 </div>
 
-<!-- Chart 1: Packed Circles -->
+<!-- Chart 1: Packed Circles — height set to match the chart's natural 820px SVG + header padding -->
 <div class="section reveal" id="categories">
   <div class="section-header">
     <div>
@@ -462,7 +446,7 @@
         Open
       </a>
     </div>
-    <iframe src="packed_circles_revised.html" height="740" title="Contractor spending packed circles by category"></iframe>
+    <iframe src="packed_circles_revised.html" height="1020" title="Contractor spending packed circles by category"></iframe>
   </div>
 </div>
 
@@ -486,7 +470,7 @@
         Open
       </a>
     </div>
-    <iframe src="spending_shift.html" height="600" title="Institutional spending shift over time"></iframe>
+    <iframe src="spending_shift.html" height="680" title="Institutional spending shift over time"></iframe>
   </div>
 </div>
 
@@ -510,7 +494,7 @@
         Open
       </a>
     </div>
-    <iframe src="spending_by_contractor.html" height="560" title="Annual spending by contractor"></iframe>
+    <iframe src="spending_by_contractor.html" height="620" title="Annual spending by contractor"></iframe>
   </div>
 </div>
 
@@ -582,12 +566,10 @@
     document.body.style.overflow = '';
   }
 
-  // Close on overlay click (but not on content)
   document.getElementById('chartModal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
   });
 
-  // Close on Escape key
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') closeModal();
   });
