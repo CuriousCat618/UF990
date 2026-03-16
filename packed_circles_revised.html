@@ -8,8 +8,8 @@
 <style>
   :root {
     --bg: #0a0c10;
-    --ink: #e2dfd6;
-    --muted: #5a5d6e;
+    --ink: #f0ede6;
+    --muted: #a0a4b8;
     --surface: #0f1118;
     --border: #1c1f2c;
     --accent: #EE7624;
@@ -374,7 +374,7 @@ const catColors = {
   "Mechanical / Electrical": "#f39c12",
   "Architecture": "#16a085",
   "Advertising / Printing": "#d35400",
-  "Accounting / Auditing": "#2c3e50",
+  "Accounting / Auditing": "#5b8dee",
   "Consulting": "#7f8c8d",
   "Excavating": "#795548",
   "Training Services": "#e91e63",
@@ -541,7 +541,7 @@ function drawRoot() {
       .attr("x", textX).attr("y", y2 - 3)
       .attr("text-anchor", anchor)
       .attr("font-family", "'IBM Plex Mono', monospace")
-      .attr("font-size", 9.5).attr("fill", "#e2dfd6")
+      .attr("font-size", 9.5).attr("fill", "#f0ede6")
       .text(d.data.name);
 
     lg.append("text")
@@ -634,7 +634,7 @@ function drawCategory(catName) {
       const lineH = fs + 3;
       const words = d.data.name.split(' ');
       const txt = el.append("text")
-        .attr("fill", "#e2dfd6")
+        .attr("fill", "#f0ede6")
         .attr("fill-opacity", 0)
         .attr("font-size", fs);
       if (words.length <= 2) {
@@ -719,7 +719,7 @@ function drawCategory(catName) {
       .attr("text-anchor", anchor)
       .attr("font-family", "'IBM Plex Mono', monospace")
       .attr("font-size", 9.5)
-      .attr("fill", "#e2dfd6")
+      .attr("fill", "#f0ede6")
       .text(d.data.name);
 
     // Value label
@@ -751,7 +751,7 @@ function drawContractor(contractorName, catName) {
   if (yearly.length === 0) {
     g.append("text").attr("x", W/2).attr("y", H/2)
       .attr("text-anchor", "middle").attr("font-size", 14)
-      .attr("fill", "#5a5d6e").text("No year-by-year data available.");
+      .attr("fill", "#a0a4b8").text("No year-by-year data available.");
     return;
   }
 
@@ -773,9 +773,9 @@ function drawContractor(contractorName, catName) {
     .attr("x", W/2).attr("y", 56)
     .attr("text-anchor", "middle")
     .attr("font-family", "'IBM Plex Mono', monospace")
-    .attr("font-size", 10).attr("fill", "#5a5d6e")
+    .attr("font-size", 10).attr("fill", "#a0a4b8")
     .attr("opacity", 0)
-    .text("Total: " + fmt(total) + "  ·  " + yearly.length + " year" + (yearly.length > 1 ? "s" : ""))
+    .text("Total: " + fmt(total) + "  ·  Appeared " + yearly.length + " year" + (yearly.length > 1 ? "s" : ""))
     .transition().duration(400).delay(100).attr("opacity", 1);
 
   const allYears = d3.range(
@@ -806,7 +806,7 @@ function drawContractor(contractorName, catName) {
       .attr("x", padL - 8).attr("y", yScale(t) + 4)
       .attr("text-anchor", "end")
       .attr("font-family", "'IBM Plex Mono', monospace")
-      .attr("font-size", 9).attr("fill", "#5a5d6e")
+      .attr("font-size", 9).attr("fill", "#a0a4b8")
       .text(t >= 1e6 ? '$' + (t/1e6).toFixed(1) + 'M' : '$' + (t/1e3).toFixed(0) + 'k');
   });
 
@@ -868,7 +868,7 @@ function drawContractor(contractorName, catName) {
       .attr("text-anchor", "middle")
       .attr("font-family", "'IBM Plex Mono', monospace")
       .attr("font-size", allYears.length > 12 ? 8 : 10)
-      .attr("fill", pay > 0 ? "#e2dfd6" : "#1c1f2c")
+      .attr("fill", pay > 0 ? "#f0ede6" : "#1c1f2c")
       .text(year);
   });
 }
