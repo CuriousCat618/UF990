@@ -9,6 +9,396 @@
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@300;400;500&display=swap');
 
   :root {
+    --bg: #0a0c10;
+    --surface: #0f1118;
+    --border: #1c1f2c;
+    --text: #f0ede6;
+    --muted: #a0a4b8;
+    --accent: #EE7624;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 48px 40px 60px;
+    overflow-x: hidden;
+  }
+
+  .grain {
+    position: fixed; inset: 0; pointer-events: none; z-index: 100; opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 200px;
+  }
+
+  header {
+    max-width: 960px;
+    margin: 0 auto 48px;
+    border-left: 3px solid var(--accent);
+    padding-left: 20px;
+  }
+
+  .eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+    font-weight: 500;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(28px, 4vw, 46px);
+    font-weight: 900;
+    line-height: 1.1;
+    color: var(--text);
+    margin-bottom: 14px;
+    letter-spacing: -0.5px;
+  }
+
+  .subtitle {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.8;
+    max-width: 580px;
+    font-weight: 300;
+  }
+
+  .chart-wrap {
+    max-width: 960px;
+    margin: 0 auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 32px 32px 24px;
+    position: relative;
+  }
+
+  svg {
+    width: 100%;
+    overflow: visible;
+  }
+
+  .axis-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    fill: var(--muted);
+  }
+
+  .gridline {
+    stroke: var(--border);
+    stroke-dasharray: 4 3;
+  }
+
+  .area-path {
+    opacity: 0.85;
+    transition: opacity 0.2s;
+    cursor: pointer;
+  }
+  .area-path:hover { opacity: 1; }
+  .chart-wrap:hover .area-path:not(:hover) { opacity: 0.35; }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color 0.2s;
+    letter-spacing: 0.05em;
+  }
+  .legend-item:hover { color: var(--text); }
+
+  .legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .tooltip {
+    position: fixed;
+    background: #1a1d26;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 14px 18px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 200;
+    font-size: 11px;
+    line-height: 1.7;
+    min-width: 200px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+
+  .tooltip.visible { opacity: 1; }
+  .tooltip-year {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .tooltip-row { display: flex; justify-content: space-between; gap: 20px; }
+  .tooltip-cat { color: var(--muted); }
+  .tooltip-val { color: var(--text); font-weight: 500; }
+
+  .annotation {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    fill: #EE7624;
+    letter-spacing: 0.1em;
+  }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<header>
+  <p class="eyebrow">University of Findlay Spending · 2002–2023</p>
+  <h1>Contractor Spending Changes<br>With Project Needs</h1>
+  <p class="subtitle">Tracking contractor spending shows institutional priorities at UF</p>
+</header>
+
+<div class="chart-wrap">
+  <svg id="chart"></svg>
+  <div class="legend" id="legend"></div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const rawData = [
+  { year: 2002, "Food Service": 1494439, "Other": 723602 },
+  { year: 2003, "Food Service": 1695139, "Construction": 596655, "Other": 99940, "Education/Training": 68842 },
+  { year: 2005, "Food Service": 2033808, "Construction": 664457, "Other": 364183, "Facilities": 76744 },
+  { year: 2006, "Food Service": 2250497, "Construction": 2077707, "Other": 251316, "Facilities": 80591 },
+  { year: 2007, "Food Service": 2336121, "Construction": 1043495, "Other": 225372 },
+  { year: 2008, "Construction": 942569, "Other": 145431, "Accounting": 124481 },
+  { year: 2009, "Food Service": 2697581, "Construction": 2231320 },
+  { year: 2010, "Food Service": 2689873, "Construction": 3993722, "Other": 571360 },
+  { year: 2011, "Construction": 8216649, "Food Service": 2811034 },
+  { year: 2012, "Food Service": 2884932, "Construction": 974975, "Software": 317022 },
+  { year: 2014, "Food Service": 3556918, "Construction": 2174640 },
+  { year: 2015, "Food Service": 3740087, "Construction": 843078, "Other": 1551345 },
+  { year: 2016, "Construction": 5797558, "Education/Training": 1689361, "Other": 401038 },
+  { year: 2017, "Construction": 14495841, "Education/Training": 1287243, "Software": 544215 },
+  { year: 2018, "Software": 2598913, "Education/Training": 843942 },
+  { year: 2019, "Software": 3736979, "Education/Training": 472930 },
+  { year: 2020, "Software": 3491614, "Education/Training": 472930, "Facilities": 217534 },
+  { year: 2021, "Software": 2248723, "Construction": 535888, "Accounting": 118620 },
+  { year: 2022, "Construction": 576983, "Software": 351497, "Education/Training": 101717 },
+  { year: 2023, "Construction": 616835, "Healthcare": 245340, "Software": 360779 },
+];
+
+const categories = ["Construction", "Food Service", "Software", "Education/Training", "Facilities", "Healthcare", "Accounting", "Other"];
+
+const palette = {
+  "Construction":      "#c85c3a",
+  "Food Service":      "#d4a017",
+  "Software":          "#4fa3d4",
+  "Education/Training":"#7db87d",
+  "Facilities":        "#9b7ab8",
+  "Healthcare":        "#e87ab0",
+  "Accounting":        "#8abeaa",
+  "Other":             "#6b7280",
+};
+
+// Fill missing years and missing categories
+const allYears = d3.range(2002, 2024);
+const filled = allYears.map(year => {
+  const row = rawData.find(d => d.year === year) || { year };
+  const out = { year };
+  categories.forEach(c => out[c] = row[c] || 0);
+  return out;
+});
+
+const margin = { top: 20, right: 24, bottom: 40, left: 80 };
+const svgEl = document.getElementById('chart');
+const W = svgEl.parentElement.clientWidth - 64;
+const H = 400;
+svgEl.setAttribute('viewBox', `0 0 ${W} ${H + margin.top + margin.bottom}`);
+
+const svg = d3.select('#chart')
+  .append('g')
+  .attr('transform', `translate(${margin.left},${margin.top})`);
+
+const width = W - margin.left - margin.right;
+const height = H;
+
+const stack = d3.stack().keys(categories).order(d3.stackOrderNone).offset(d3.stackOffsetNone);
+const series = stack(filled);
+
+const x = d3.scaleLinear()
+  .domain([2002, 2023])
+  .range([0, width]);
+
+const maxVal = d3.max(series[series.length - 1], d => d[1]);
+const y = d3.scaleLinear()
+  .domain([0, maxVal * 1.05])
+  .range([height, 0]);
+
+// Grid
+const ticks = y.ticks(6);
+ticks.forEach(t => {
+  svg.append('line')
+    .attr('class', 'gridline')
+    .attr('x1', 0).attr('x2', width)
+    .attr('y1', y(t)).attr('y2', y(t));
+});
+
+// Y axis
+svg.append('g').call(
+  d3.axisLeft(y)
+    .ticks(6)
+    .tickFormat(d => d >= 1e6 ? `$${(d/1e6).toFixed(1)}M` : `$${(d/1e3).toFixed(0)}K`)
+    .tickSize(0)
+    .tickPadding(12)
+).select('.domain').remove();
+svg.selectAll('.tick text').attr('class', 'axis-label').style('font-family', "'DM Mono', monospace");
+
+// X axis
+const xTicks = [2002,2005,2008,2011,2014,2017,2020,2023];
+svg.selectAll('.xtick')
+  .data(xTicks)
+  .join('text')
+  .attr('class', 'axis-label')
+  .attr('x', d => x(d))
+  .attr('y', height + 28)
+  .attr('text-anchor', 'middle')
+  .text(d => d);
+
+// Areas
+const area = d3.area()
+  .x(d => x(d.data.year))
+  .y0(d => y(d[0]))
+  .y1(d => y(d[1]))
+  .curve(d3.curveCatmullRom.alpha(0.5));
+
+svg.selectAll('.area-path')
+  .data(series)
+  .join('path')
+  .attr('class', 'area-path')
+  .attr('d', area)
+  .attr('fill', d => palette[d.key])
+  .on('mousemove', (event, d) => showTooltip(event, d))
+  .on('mouseleave', hideTooltip);
+
+// Annotations
+const annotations = [
+  { year: 2013, label: "Financial year redefined",      yOffset: 16 },
+  { year: 2016, label: "Sodexo delisted as contractor", yOffset: 36 },
+  { year: 2017, label: "Construction of CBSL",          yOffset: 56 },
+  { year: 2019, label: "Workday Implemented",            yOffset: 16 },
+];
+
+annotations.forEach(a => {
+  const xPos = x(a.year);
+
+  // Vertical rule — orange and visible
+  svg.append('line')
+    .attr('x1', xPos).attr('x2', xPos)
+    .attr('y1', 0).attr('y2', height)
+    .attr('stroke', '#EE7624')
+    .attr('stroke-opacity', 0.6)
+    .attr('stroke-dasharray', '3 4')
+    .attr('stroke-width', 1.5);
+
+  const labelText = a.label.toUpperCase();
+  const charWidth = 6.2;
+  const labelW = labelText.length * charWidth + 10;
+  const pillTop = a.yOffset - 10;
+  const pillBot = a.yOffset + 4;
+
+  // Dark background pill flush against the line
+  svg.append('rect')
+    .attr('x', xPos + 1)
+    .attr('y', pillTop)
+    .attr('width', labelW)
+    .attr('height', 14)
+    .attr('fill', '#0a0c10')
+    .attr('rx', 2)
+    .attr('opacity', 0.9);
+
+  // Orange left border on pill to visually tie to the line
+  svg.append('rect')
+    .attr('x', xPos + 1)
+    .attr('y', pillTop)
+    .attr('width', 2)
+    .attr('height', 14)
+    .attr('fill', '#EE7624')
+    .attr('opacity', 0.8);
+
+  svg.append('text')
+    .attr('class', 'annotation')
+    .attr('x', xPos + 7)
+    .attr('y', a.yOffset)
+    .text(labelText);
+});
+
+// Legend
+const legendEl = document.getElementById('legend');
+categories.forEach(cat => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  item.innerHTML = `<div class="legend-swatch" style="background:${palette[cat]}"></div>${cat}`;
+  legendEl.appendChild(item);
+});
+
+// Tooltip
+const tooltip = document.getElementById('tooltip');
+
+function showTooltip(event, seriesData) {
+  const [mx] = d3.pointer(event, svgEl);
+  const adjustedX = mx - margin.left;
+  const year = Math.round(x.invert(adjustedX));
+  const rowData = filled.find(d => d.year === year);
+  if (!rowData) return;
+
+  const total = categories.reduce((s, c) => s + rowData[c], 0);
+  const rows = categories
+    .filter(c => rowData[c] > 0)
+    .sort((a, b) => rowData[b] - rowData[a])
+    .map(c => `<div class="tooltip-row"><span class="tooltip-cat" style="color:${palette[c]}">${c}</span><span class="tooltip-val">$${(rowData[c]/1000).toFixed(0)}K</span></div>`)
+    .join('');
+
+  tooltip.innerHTML = `<div class="tooltip-year">${year}</div>${rows}<div class="tooltip-row" style="margin-top:8px;border-top:1px solid #1e2230;padding-top:8px"><span class="tooltip-cat">TOTAL</span><span class="tooltip-val">$${(total/1e6).toFixed(2)}M</span></div>`;
+  tooltip.classList.add('visible');
+  tooltip.style.left = (event.clientX + 18) + 'px';
+  tooltip.style.top = (event.clientY - 20) + 'px';
+}
+
+function hideTooltip() {
+  tooltip.classList.remove('visible');
+}
+</script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Institutional Spending Shift Over Time</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@300;400;500&display=swap');
+
+  :root {
     --bg: #0d0f14;
     --surface: #13161d;
     --border: #1e2230;
